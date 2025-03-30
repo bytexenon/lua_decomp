@@ -1,10 +1,20 @@
 use super::constants::Endianness;
+use log::debug;
 use nom::{
     IResult, Parser,
     bytes::complete::tag,
     combinator::{map, verify},
     error::context,
 };
+
+// Constants for validation
+const MAGIC_NUMBER: &[u8] = b"\x1BLua";
+const EXPECTED_VERSION: u8 = 0x51;
+const EXPECTED_FORMAT: u8 = 0;
+const EXPECTED_SIZE_INT: u8 = 4;
+const EXPECTED_SIZE_SIZE_T: u8 = 8;
+const EXPECTED_SIZE_INSTRUCTION: u8 = 4;
+const EXPECTED_SIZE_NUMBER: u8 = 8;
 
 /// Header metadata describing the bytecode format and target architecture
 #[derive(Debug)]
@@ -17,42 +27,73 @@ pub struct Header {
     pub size_size_t: u8,        // Size of a size_t value in bytes
     pub size_instruction: u8,   // Size of an instruction in bytes
     pub size_number: u8,        // Size of a number in bytes
-
-    /// Whether numbers (constants) are stored as integers (`true`) or floats (`false`)
-    pub integral_flag: bool,
+    pub integral_flag: bool,    // Whether numbers are stored as integers or floats
 }
 
-pub fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
-    let (input, _) = context("invalid magic number", tag(&b"\x1BLua"[..])).parse(input)?;
+/// Parsing functions module
+mod parsers {
+    use super::*;
 
-    let (input, version) = context(
-        "invalid Lua version (must be 0x51)",
-        verify(nom::number::complete::u8, |&v| v == 0x51),
-    )
-    .parse(input)?;
-    let (input, format) = context(
-        "unsupported format (must be 0 (official))",
-        verify(nom::number::complete::u8, |&f| f == 0),
-    )
-    .parse(input)?;
+    pub fn parse_magic_number(input: &[u8]) -> IResult<&[u8], &[u8]> {
+        context("invalid magic number", tag(MAGIC_NUMBER)).parse(input)
+    }
 
-    let (input, endianness) = map(nom::number::complete::u8, |b| match b {
-        1 => Endianness::Little,
-        _ => Endianness::Big,
-    })
-    .parse(input)?;
+    pub fn parse_version(input: &[u8]) -> IResult<&[u8], u8> {
+        context(
+            "invalid Lua version (must be 0x51)",
+            verify(nom::number::complete::u8, |&v| v == EXPECTED_VERSION),
+        )
+        .parse(input)
+    }
 
-    let parse_size = |name, expected| {
+    pub fn parse_format(input: &[u8]) -> IResult<&[u8], u8> {
+        context(
+            "unsupported format (must be 0 (official))",
+            verify(nom::number::complete::u8, |&f| f == EXPECTED_FORMAT),
+        )
+        .parse(input)
+    }
+
+    pub fn parse_endianness(input: &[u8]) -> IResult<&[u8], Endianness> {
+        map(nom::number::complete::u8, |b| match b {
+            1 => Endianness::Little,
+            _ => Endianness::Big,
+        })
+        .parse(input)
+    }
+
+    pub fn parse_size<'a>(
+        name: &'static str,
+        expected: u8,
+        input: &'a [u8],
+    ) -> IResult<&'a [u8], u8> {
         context(
             name,
             verify(nom::number::complete::u8, move |&v| v == expected),
         )
-    };
-    let (input, size_int) = parse_size("invalid int size", 4).parse(input)?;
-    let (input, size_size_t) = parse_size("invalid size_t size", 8).parse(input)?;
-    let (input, size_instruction) = parse_size("invalid instruction size", 4).parse(input)?;
-    let (input, size_number) = parse_size("invalid number size", 8).parse(input)?;
-    let (input, integral_flag) = map(nom::number::complete::u8, |b| b != 0).parse(input)?;
+        .parse(input)
+    }
+
+    pub fn parse_integral_flag(input: &[u8]) -> IResult<&[u8], bool> {
+        map(nom::number::complete::u8, |b| b != 0).parse(input)
+    }
+}
+
+use parsers::*;
+
+/// Parse the header of the Lua bytecode
+pub fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
+    let (input, _) = parse_magic_number(input)?;
+    let (input, version) = parse_version(input)?;
+    let (input, format) = parse_format(input)?;
+    let (input, endianness) = parse_endianness(input)?;
+
+    let (input, size_int) = parse_size("invalid int size", EXPECTED_SIZE_INT, input)?;
+    let (input, size_size_t) = parse_size("invalid size_t size", EXPECTED_SIZE_SIZE_T, input)?;
+    let (input, size_instruction) =
+        parse_size("invalid instruction size", EXPECTED_SIZE_INSTRUCTION, input)?;
+    let (input, size_number) = parse_size("invalid number size", EXPECTED_SIZE_NUMBER, input)?;
+    let (input, integral_flag) = parse_integral_flag(input)?;
 
     let header = Header {
         version,
@@ -65,7 +106,7 @@ pub fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
         integral_flag,
     };
 
-    crate::debug_println!("Parsed header: {:#?}", header);
+    debug!("Parsed header: {:#?}", header);
 
     Ok((input, header))
 }
