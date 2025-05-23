@@ -1,16 +1,11 @@
-pub mod constants;
-pub mod debug;
-pub mod function;
-pub mod header;
+pub mod bytecode;
 pub mod parsers;
 
-pub use function::parse_function;
-pub use header::parse_header;
+use bytecode::{FunctionPrototype, Header};
 
-use function::FunctionPrototype;
-use header::Header;
+pub use parsers::function::parse_function;
+pub use parsers::header::parse_header;
 
-/// Main entry point for parsing Lua bytecode
 pub fn parse_lua_bytecode(
     input: &[u8],
 ) -> Result<(Header, FunctionPrototype), nom::Err<nom::error::Error<&[u8]>>> {

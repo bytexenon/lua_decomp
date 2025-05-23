@@ -1,33 +1,14 @@
-use super::constants::Constant;
-use super::debug::{DebugInfo, LocalVariable};
-use super::header::Header;
+use super::super::bytecode::FunctionPrototype;
+use super::super::bytecode::Header;
+use super::super::bytecode::{DebugInfo, LocalVariable};
 use super::parsers::{parse_constant, parse_instruction, parse_integer, parse_string};
-use nom::{IResult, Parser, error::ErrorKind, multi::count, number::complete::u8};
-
 use log::debug;
-
-/// Represents a Lua function prototype
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct FunctionPrototype {
-    source_name: String,                // Source file name
-    line_defined: i32,                  // Line number where the function is defined
-    last_line_defined: i32,             // Last line number where the function is defined
-    num_upvalues: u8,                   // Number of upvalues
-    num_params: u8,                     // Number of parameters
-    is_vararg: u8,                      // Whether the function accepts variable arguments
-    max_stack_size: u8,                 // Maximum stack size
-    code: Vec<u32>,                     // Bytecode instructions
-    constants: Vec<Constant>,           // Constants used in the function
-    prototypes: Vec<FunctionPrototype>, // Nested function prototypes
-    debug_info: DebugInfo,              // Debug information
-}
+use nom::{error::ErrorKind, multi::count, number::complete::u8, IResult, Parser};
 
 /// Parsing functions module
 mod parsers {
     use super::*;
 
-    /// Helper function to parse a section with a length prefix
     pub fn parse_section<'a, T, F>(
         input: &'a [u8],
         header: &Header,
@@ -42,7 +23,6 @@ mod parsers {
         count(parser, len).parse(input)
     }
 
-    /// Parse a local variable
     pub fn parse_local_variable<'a>(
         input: &'a [u8],
         header: &Header,
@@ -61,7 +41,6 @@ mod parsers {
         ))
     }
 
-    /// Parse debug information (lineinfo, locals, upvalues)
     pub fn parse_debug_info<'a>(input: &'a [u8], header: &Header) -> IResult<&'a [u8], DebugInfo> {
         let (input, lineinfo) = parse_section(input, header, |i| parse_integer(i, header))?;
         let (input, locals) = parse_section(input, header, |i| parse_local_variable(i, header))?;

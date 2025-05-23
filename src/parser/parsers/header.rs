@@ -1,10 +1,10 @@
-use super::constants::Endianness;
+use super::super::bytecode::{Endianness, Header};
 use log::debug;
 use nom::{
-    IResult, Parser,
     bytes::complete::tag,
     combinator::{map, verify},
     error::context,
+    IResult, Parser,
 };
 
 // Constants for validation
@@ -15,20 +15,6 @@ const EXPECTED_SIZE_INT: u8 = 4;
 const EXPECTED_SIZE_SIZE_T: u8 = 8;
 const EXPECTED_SIZE_INSTRUCTION: u8 = 4;
 const EXPECTED_SIZE_NUMBER: u8 = 8;
-
-/// Header metadata describing the bytecode format and target architecture
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct Header {
-    pub version: u8,            // Lua version (e.g., 0x51 for Lua 5.1)
-    pub format: u8,             // Bytecode format (0 for official Lua bytecode)
-    pub endianness: Endianness, // Byte order (Big or Little Endian)
-    pub size_int: u8,           // Size of an integer in bytes
-    pub size_size_t: u8,        // Size of a size_t value in bytes
-    pub size_instruction: u8,   // Size of an instruction in bytes
-    pub size_number: u8,        // Size of a number in bytes
-    pub integral_flag: bool,    // Whether numbers are stored as integers or floats
-}
 
 /// Parsing functions module
 mod parsers {

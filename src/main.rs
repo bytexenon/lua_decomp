@@ -1,6 +1,8 @@
 mod parser;
+
 use clap::Parser;
 use log::info;
+
 use parser::parse_lua_bytecode;
 
 /// Command-line arguments parser
@@ -8,7 +10,7 @@ use parser::parse_lua_bytecode;
 #[clap(
     author = "bytexenon",
     version = "1.0.0",
-    about = "Decompile .luac file and convert them back to Lua source code"
+    about = "Decompile .luac files and convert them back to Lua source code"
 )]
 struct Arguments {
     /// Paths to the Lua bytecode files to decompile
@@ -48,8 +50,12 @@ fn main() {
         match parse_lua_bytecode(&bytecode) {
             Ok((header, prototype)) => {
                 info!("Parsed Lua bytecode successfully.");
+
                 println!("Header: {:#?}", header);
                 println!("Function Prototype: {:#?}", prototype);
+                for instr in prototype.code {
+                    println!("{}", instr);
+                }
             }
             Err(err) => {
                 eprintln!("Error parsing Lua bytecode: {:?}", err);

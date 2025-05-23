@@ -1,11 +1,10 @@
-use super::constants::{Constant, Endianness};
-use super::header::Header;
+use super::super::bytecode::{Constant, Endianness, Header, Instruction};
 use nom::{
-    IResult, Parser,
     bytes::complete::{tag, take},
     combinator::{map, map_res},
     error::ErrorKind,
     number::complete::{be_u32, be_u64, le_u32, le_u64, u8},
+    IResult, Parser,
 };
 
 /// Parses a 32-bit integer with specified endianness
@@ -51,11 +50,14 @@ pub fn parse_string<'a>(input: &'a [u8], header: &Header) -> IResult<&'a [u8], S
 }
 
 /// Parses a single instruction (4 bytes) with specified endianness
-pub fn parse_instruction<'a>(input: &'a [u8], header: &Header) -> IResult<&'a [u8], u32> {
-    match header.endianness {
+pub fn parse_instruction<'a>(input: &'a [u8], header: &Header) -> IResult<&'a [u8], Instruction> {
+    let (input, instruction) = match header.endianness {
         Endianness::Big => map(be_u32, |v| v as u32).parse(input),
         Endianness::Little => map(le_u32, |v| v as u32).parse(input),
-    }
+    }?;
+
+    let instr = Instruction::new(instruction);
+    Ok((input, instr))
 }
 
 /// Parses a constant number according to header's integral flag
