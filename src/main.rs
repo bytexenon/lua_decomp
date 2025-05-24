@@ -16,7 +16,7 @@ struct Arguments {
     /// Paths to the Lua bytecode files to decompile
     #[clap(
         required = true,
-        help = "One or more Lua bytecode files to decompile.",
+        help = "One or more Lua bytecode file to decompile.",
         value_name = "FILE",
         value_hint = clap::ValueHint::FilePath
     )]
