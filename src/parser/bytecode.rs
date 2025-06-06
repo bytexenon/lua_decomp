@@ -25,7 +25,8 @@ pub enum Endianness {
     Little,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, TryFromPrimitive)]
+#[repr(u8)]
 pub enum InstructionFormat {
     IABC,
     IABx,
@@ -105,14 +106,12 @@ impl Instruction {
     pub const SIZE_B: u32 = 9;
     pub const SIZE_A: u32 = 8;
     pub const SIZE_BX: u32 = Instruction::SIZE_C + Instruction::SIZE_B;
-    // const SIZE_SBX: u32 = Instruction::SIZE_BX - 1;
 
     pub const POS_OP: u32 = 0;
     pub const POS_A: u32 = Instruction::POS_OP + Instruction::SIZE_OP;
     pub const POS_C: u32 = Instruction::POS_A + Instruction::SIZE_A;
     pub const POS_B: u32 = Instruction::POS_C + Instruction::SIZE_C;
     pub const POS_BX: u32 = Instruction::POS_C;
-    // const POS_SBX: u32 = Instruction::POS_BX;
 
     pub const fn new(instr: u32) -> Self {
         Self(instr)
@@ -145,11 +144,7 @@ impl Instruction {
     }
 
     pub fn format(&self) -> InstructionFormat {
-        match OPMODES[self.opcode() as usize].0 {
-            InstructionFormat::IABC => InstructionFormat::IABC,
-            InstructionFormat::IABx => InstructionFormat::IABx,
-            InstructionFormat::IAsBx => InstructionFormat::IAsBx,
-        }
+        InstructionFormat::try_from(OPMODES[self.opcode() as usize].0).unwrap()
     }
 
     // Operands //

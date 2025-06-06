@@ -16,17 +16,26 @@ const EXPECTED_SIZE_SIZE_T: u8 = 8;
 const EXPECTED_SIZE_INSTRUCTION: u8 = 4;
 const EXPECTED_SIZE_NUMBER: u8 = 8;
 
+// Constants for errors
+const ERROR_INVALID_MAGIC_NUMBER: &str = "invalid magic number";
+const ERROR_INVALID_VERSION: &str = "invalid Lua version (must be 0x51)";
+const ERROR_INVALID_FORMAT: &str = "unsupported format (must be 0 (official))";
+const ERROR_INVALID_SIZE_INT: &str = "invalid int size";
+const ERROR_INVALID_SIZE_SIZE_T: &str = "invalid size_t size";
+const ERROR_INVALID_SIZE_INSTRUCTION: &str = "invalid instruction size";
+const ERROR_INVALID_SIZE_NUMBER: &str = "invalid number size";
+
 /// Parsing functions module
 mod parsers {
     use super::*;
 
     pub fn parse_magic_number(input: &[u8]) -> IResult<&[u8], &[u8]> {
-        context("invalid magic number", tag(MAGIC_NUMBER)).parse(input)
+        context(ERROR_INVALID_MAGIC_NUMBER, tag(MAGIC_NUMBER)).parse(input)
     }
 
     pub fn parse_version(input: &[u8]) -> IResult<&[u8], u8> {
         context(
-            "invalid Lua version (must be 0x51)",
+            ERROR_INVALID_VERSION,
             verify(nom::number::complete::u8, |&v| v == EXPECTED_VERSION),
         )
         .parse(input)
@@ -34,7 +43,7 @@ mod parsers {
 
     pub fn parse_format(input: &[u8]) -> IResult<&[u8], u8> {
         context(
-            "unsupported format (must be 0 (official))",
+            ERROR_INVALID_FORMAT,
             verify(nom::number::complete::u8, |&f| f == EXPECTED_FORMAT),
         )
         .parse(input)
@@ -74,11 +83,14 @@ pub fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
     let (input, format) = parse_format(input)?;
     let (input, endianness) = parse_endianness(input)?;
 
-    let (input, size_int) = parse_size("invalid int size", EXPECTED_SIZE_INT, input)?;
-    let (input, size_size_t) = parse_size("invalid size_t size", EXPECTED_SIZE_SIZE_T, input)?;
-    let (input, size_instruction) =
-        parse_size("invalid instruction size", EXPECTED_SIZE_INSTRUCTION, input)?;
-    let (input, size_number) = parse_size("invalid number size", EXPECTED_SIZE_NUMBER, input)?;
+    let (input, size_int) = parse_size(ERROR_INVALID_SIZE_INT, EXPECTED_SIZE_INT, input)?;
+    let (input, size_size_t) = parse_size(ERROR_INVALID_SIZE_SIZE_T, EXPECTED_SIZE_SIZE_T, input)?;
+    let (input, size_instruction) = parse_size(
+        ERROR_INVALID_SIZE_INSTRUCTION,
+        EXPECTED_SIZE_INSTRUCTION,
+        input,
+    )?;
+    let (input, size_number) = parse_size(ERROR_INVALID_SIZE_NUMBER, EXPECTED_SIZE_NUMBER, input)?;
     let (input, integral_flag) = parse_integral_flag(input)?;
 
     let header = Header {
